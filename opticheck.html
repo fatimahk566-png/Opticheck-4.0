@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>OptiCheck Clinical Vision Examination</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+
+body{
+font-family: Inter;
+background: linear-gradient(135deg,#0b0f2a,#1e3c72);
+color:white;
+margin:0;
+text-align:center;
+}
+
+.page{
+display:none;
+padding:40px;
+}
+
+.active{
+display:block;
+}
+
+.logo{
+font-family: Orbitron;
+font-size:64px;
+color:#4da6ff;
+}
+
+.warning{
+background:#b00020;
+padding:15px;
+border-radius:10px;
+margin:20px auto;
+width:60%;
+}
+
+button{
+background:#1976d2;
+border:none;
+padding:15px 30px;
+color:white;
+font-size:18px;
+border-radius:8px;
+cursor:pointer;
+}
+
+button:hover{
+background:#0d47a1;
+}
+
+.chart{
+margin:30px;
+font-weight:bold;
+letter-spacing:8px;
+}
+
+input{
+font-size:28px;
+padding:10px;
+text-align:center;
+}
+
+.result{
+background:#0f1a44;
+padding:20px;
+display:inline-block;
+border-radius:10px;
+text-align:left;
+}
+
+</style>
+
+</head>
+<body>
+
+<div id="p1" class="page active">
+
+<div class="logo">OptiCheck</div>
+
+<div class="warning">
+
+Stand exactly 3 metres away from screen.<br><br>
+
+This is a clinical-grade screening tool but NOT a medical diagnosis.<br>
+
+Consult optometrist for exact prescription.
+
+</div>
+
+<button onclick="startTest()">Start Clinical Exam</button>
+
+<br><br>
+
+Created by Maahir Gani | Isa Suliman | Daanyaal Miya
+
+</div>
+
+<div id="p2" class="page">
+
+<h2 id="eyeTitle"></h2>
+
+<div id="snellen" class="chart"></div>
+
+Type characters and press ENTER<br><br>
+
+<input id="answer">
+
+</div>
+
+<div id="p3" class="page">
+
+<h2>Colour Vision Test</h2>
+
+<div style="font-size:70px;color:red">12</div>
+
+<input id="colorInput">
+
+</div>
+
+<div id="p4" class="page">
+
+<h2>Astigmatism Test</h2>
+
+Do lines appear distorted?<br><br>
+
+<button onclick="setAstig(true)">YES</button>
+<button onclick="setAstig(false)">NO</button>
+
+</div>
+
+<div id="p5" class="page">
+
+<h2>Clinical Prescription Results</h2>
+
+<div id="output" class="result"></div>
+
+</div>
+
+<script>
+
+/* Real Snellen progression */
+
+const snellenLevels = [
+{size:88, denom:6, text:"E"},
+{size:62, denom:9, text:"FP"},
+{size:44, denom:12, text:"TOZ"},
+{size:31, denom:18, text:"LPED"},
+{size:22, denom:24, text:"PECFD"},
+{size:16, denom:36, text:"EDFCZP"},
+{size:11, denom:60, text:"FELOPZD"}
+];
+
+let eye="OD";
+let index=0;
+let rightLevel=0;
+let leftLevel=0;
+
+let astig=false;
+let colorOK=false;
+
+function showPage(id){
+
+document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+document.getElementById(id).classList.add("active");
+
+}
+
+function startTest(){
+
+eye="OD";
+index=0;
+showPage("p2");
+updateChart();
+
+}
+
+function updateChart(){
+
+document.getElementById("eyeTitle").innerHTML =
+eye=="OD" ?
+"RIGHT EYE (OD) — Cover LEFT eye" :
+"LEFT EYE (OS) — Cover RIGHT eye";
+
+let level=snellenLevels[index];
+
+document.getElementById("snellen").innerHTML =
+"<div style='font-size:"+level.size+"px'>"+level.text+"</div>";
+
+}
+
+document.getElementById("answer").addEventListener("keypress", function(e){
+
+if(e.key=="Enter"){
+
+let correct = this.value.toUpperCase() == snellenLevels[index].text;
+
+if(correct){
+
+if(eye=="OD") rightLevel=index;
+else leftLevel=index;
+
+index++;
+
+if(index<snellenLevels.length){
+
+updateChart();
+
+}else{
+
+if(eye=="OD"){
+
+eye="OS";
+index=0;
+updateChart();
+
+}else{
+
+showPage("p3");
+
+}
+
+}
+
+}else{
+
+if(eye=="OD") rightLevel=index;
+else leftLevel=index;
+
+if(eye=="OD"){
+
+eye="OS";
+index=0;
+updateChart();
+
+}else{
+
+showPage("p3");
+
+}
+
+}
+
+this.value="";
+
+}
+
+});
+
+document.getElementById("colorInput").addEventListener("keypress", function(e){
+
+if(e.key=="Enter"){
+
+colorOK = this.value=="12";
+showPage("p4");
+
+}
+
+});
+
+function setAstig(val){
+
+astig=val;
+calculate();
+
+}
+
+function logMARfromLevel(level){
+
+return Math.log10(snellenLevels[level].denom/6);
+
+}
+
+function sphereFromLogMAR(logmar){
+
+let diopter = -(logmar*2.5);
+
+return Math.round(diopter*4)/4;
+
+}
+
+function calculate(){
+
+showPage("p5");
+
+let OD_logMAR = logMARfromLevel(rightLevel);
+let OS_logMAR = logMARfromLevel(leftLevel);
+
+let OD_sphere = sphereFromLogMAR(OD_logMAR);
+let OS_sphere = sphereFromLogMAR(OS_logMAR);
+
+let cyl = astig ? -0.75 : 0.00;
+let axis = astig ? 180 : 0;
+
+document.getElementById("output").innerHTML =
+
+`
+RIGHT EYE (OD)<br>
+VA: 6/${snellenLevels[rightLevel].denom}<br>
+SPH: ${OD_sphere.toFixed(2)} DS<br>
+CYL: ${cyl.toFixed(2)} DC<br>
+AXIS: ${axis}°<br><br>
+
+LEFT EYE (OS)<br>
+VA: 6/${snellenLevels[leftLevel].denom}<br>
+SPH: ${OS_sphere.toFixed(2)} DS<br>
+CYL: ${cyl.toFixed(2)} DC<br>
+AXIS: ${axis}°<br><br>
+
+FINAL PRESCRIPTION:<br><br>
+
+OD: ${OD_sphere.toFixed(2)} DS / ${cyl.toFixed(2)} DC × ${axis}<br>
+OS: ${OS_sphere.toFixed(2)} DS / ${cyl.toFixed(2)} DC × ${axis}<br><br>
+
+Colour Vision: ${colorOK?"Normal":"Deficient"}<br>
+Astigmatism: ${astig?"Present":"Absent"}
+
+`;
+
+}
+
+</script>
+
+</body>
+</html>
